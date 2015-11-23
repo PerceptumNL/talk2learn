@@ -13,7 +13,7 @@
 		<div class="content">
 			<span class="navigation">
 				<div id="categoryComponent" class="component">
-					<ul class="categoryList">
+					<ul class="categoryList" id="categoryList">
 					</ul>
 				</div>
 				<div class="component">
@@ -96,16 +96,16 @@
 				</div>
 
 				<div class="component scores hidden">
-					<span class="currentScore">
+					<span class="currentScore" id="currentScore">
 						Score: <span id="currentScoreValue"></span>
 					</span>
-					<span class="highScore">
+					<span class="highScore" id="highScore">
 						High Score: <span id="highScoreValue"></span>
 					</span>
 				</div>
 
 				<div class="card component hidden">
-					<div class="problem"></div>
+					<div id="problem" class="problem"></div>
 				</div>
 				<div class="iHeard component hidden">
 					<span class="iHeardLabel">Ik verstond:</span> <span id="iHeardText"></span>
@@ -120,13 +120,11 @@
             Te gebruiken op Limes?
 		</div>
 
-		<script src="{% static 'flashcards/js/handlebars-runtime.js' %}"></script>
-		<script src="{% static 'flashcards/js/categories.js' %}"></script>
-		<script src="{% static 'flashcards/js/common.js' %}"></script>
-		<script src="{% static 'flashcards/js/sampleProblems.js' %}"></script>
+		<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
 		<script src="{% static 'flashcards/js/main.js' %}"></script>
 		<script type="text/javascript">
 			var doneSound = new Audio("{% static 'flashcards/mp3/done.mp3' %}");
+			var collectionsAPI = "{% url 'get_collections' %}"
 		</script>
 		<!--
 		<script type="text/javascript">

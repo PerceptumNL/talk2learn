@@ -2,7 +2,9 @@
 Module containing views for the flashcards application.
 """
 from django.shortcuts import render, get_object_or_404
+from django.core.urlresolvers import reverse
 from django.http import HttpResponse, JsonResponse
+from urllib.parse import quote
 from .models import *
 
 import random
@@ -22,33 +24,34 @@ def get_collections(request):
     """
     Return a JSON list of collection objects.
 
-    A collection is described as a dictionary containing the keys `id` and
-    `title`, where the identifier (i.e. id) and title are both strings. The
-    identifier can be used to refer to the collection in other requests.
-
-    Example:
-        {"id": "1", "title": "Example collection"}
+    A collection is described as a dictionary containing the keys `id`, `title`
+    and `card`, where the identifier (i.e. id) and title are both strings, and
+    card is an URL pointing to the service that produces cards that belong to
+    the collection. The identifier can be used to refer to the collection in
+    other requests.
 
     :param request: Incoming request.
     :type request: :py:class:`django.http.HttpRequest`
     :return: List of collection dictionaries, serialized in JSON.
     :rtype: :py:class:`django.http.JsonResponse`
     """
-    return JsonResponse([{"id": str(c.pk), "title": c.title} \
+    descriptor = (lambda c: {
+        "id": str(c.pk),
+        "title": c.title,
+        "card": reverse('get_card', args=(c.pk,))})
+
+    return JsonResponse([descriptor(c) \
             for c in Collection.objects.filter(active=True)], safe=False)
 
 def get_card(request, collection_id):
     """
     Return a card from the collection refered to by `colllection_id`.
 
-    A card is described as a dictionary containing the keys `id` and
-    `question`, where the identifier (i.e. id) and question are both strings.
-    The identifier can be used to refer to the collection in other requests.
-
-    Examples:
-
-        1. {"id": "1", "front": "What do the knights say?"}
-        2. {"id": "2*3", "front": "What is 2*3?"}
+    A card is described as a dictionary containing the keys `id`, `question`
+    and `check`, where the identifier (i.e. id) and question are both strings,
+    and check is the URL denoting the service that can check if a provided
+    answer matches the back of the card. The identifier can be used to refer to
+    the collection in other requests.
 
     :param request: Incoming request.
     :type request: :py:class:`django.http.HttpRequest`
@@ -61,8 +64,12 @@ def get_card(request, collection_id):
     for GeneratorClass in CardGenerator.__subclasses__():
         if generator == GeneratorClass.__name__:
             try:
-                return JsonResponse(GeneratorClass.get_card(
-                    request=request, collection=collection))
+                card = GeneratorClass.get_card(request=request,
+                                               collection=collection)
+                card['check'] = "%s?card_id=%s" % (
+                    reverse("check_card", args=(collection_id,)),
+                    quote(str(card['id']), safe=""))
+                return JsonResponse(card)
             except Exception as error:
                 return HttpResponse("Cannot generate card: %s" % (error,),
                                     status=500)

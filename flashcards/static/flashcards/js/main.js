@@ -1,9 +1,109 @@
-/*global Handlebars, common, samples */
 var SpeechRecognition = window.mozSpeechRecognition ||
 	window.msSpeechRecognition ||
 	window.oSpeechRecognition ||
 	window.webkitSpeechRecognition ||
 	window.SpeechRecognition;
+
+
+function Talk2LearnApplication(){
+	// Save a copy of a pointer to the current object, to use when we want to
+	// refer to members of the current object in a different context.
+	var _this = this;
+
+	// Mapping of collection id's to collection paramaters
+	var collections = {};
+	// Currently selected collection
+	var selected_collection = null;
+	// Currently rendered card
+	var current_card = null;
+	// Scores
+	var score = 0, highscore = 0;
+
+	// Current language to use in speech recognition
+	var speech_language = 'nl-NL';
+
+	this.init = function(collections_api){
+		$.get(collections_api, function(data){
+			for(var i = 0; i < data.length; i++){
+				// Save a mapping from each collection's id to it's parameters.
+				collections[data[i]['id']] = data[i];
+				// Add collection to collection selector
+				_this.render_collection_option(data[i]);
+			}
+		})
+	}
+
+	// Display a new collection in the collection selector
+	this.render_collection_option = function(collection){
+		$("#categoryList").append(
+			$("<li>")
+				.addClass("category")
+				.html(collection['title'])
+				.on("click", function(){
+					_this.select_collection(collection['id'], this);
+				}));
+	}
+
+	// Select a new collection by its collection_id
+	this.select_collection = function(collection_id, selector_item){
+		if( selected_collection ){
+			// Unload the current selected collection
+			$("#categoryList li.selected").removeClass("selected");
+		}
+		// Store new selected collection
+		selected_collection = collections[collection_id];
+		// Add visual effect to new selected collection
+		$(selector_item).addClass("selected");
+		// Load the first card from the new selected collection
+		_this.select_next_card()
+	}
+
+	// Retrieve a new card from the selected collection
+	this.select_next_card = function(){
+		$.get(selected_collection.card, function(data){
+			if(current_card == data){
+				// If the new card is already displayed, request a new one.
+				_this.select_next_card();
+			} else {
+				current_card = data;
+				_this.display_card(data)
+			}
+		}
+	}
+
+	// Display a card's question
+	this.display_card = function(card){
+		$("#problem").html(card['question'])
+	}
+
+	// Check the provided answer with the current card.
+	// If its correct, update the score and move on.
+	this.check_answer = function(answer){
+		var answer = answer.trim().toLowerCase();
+		if (answer.indexOf('stop') >= 0){
+			_this.select_next_card();
+			return;
+		}
+
+		$.post(current_card.check, {'answer': answer}, function(correct){
+			if(correct){
+				$("#currentScoreValue").html(++score);
+
+				if (score > highscore) {
+					$("#currentScoreValue").addClass('highlight');
+				}
+
+				_this.select_next_card();
+			}
+		})
+	}
+
+	// Set language to use in speech recognition
+	this.set_language = function(lang){
+		speech_language = lang;
+	}
+}
+
 
 var currentProblem;
 var currentScore = 0;
@@ -40,97 +140,15 @@ function selectLanguage(newValue) {
     selectLanguage(selectedLanguage);
 }
 
-function getQuestionFromList(theList) {
-	var index = getRandomInteger(theList.length) - 1;
-	return theList[index];
-}
-
-function generateAdditionProblem() {
-	var first = getRandomInteger(10);
-	var second = getRandomInteger(10);
-	return {
-		firstNumber: first,
-		secondNumber: second,
-		value: first + second
-	};
-}
-
-function generateSubtractionProblem() {
-	var prob = generateAdditionProblem();
-	var first = prob.value;
-	var second = prob.firstNumber;
-	return {
-		firstNumber: first,
-		secondNumber: second,
-		value: prob.secondNumber
-	};
-}
-
-function generateMultiplicationProblem() {
-	var first = getRandomInteger(10);
-	var second = getRandomInteger(10);
-	return {
-		firstNumber: first,
-		secondNumber: second,
-		value: first * second
-	};
-}
-
-function generateDivisionProblem() {
-	var prob = generateMultiplicationProblem();
-	var first = prob.value;
-	var second = prob.firstNumber;
-	return {
-		firstNumber: first,
-		secondNumber: second,
-		value: prob.secondNumber
-	};
-}
-
-function getRandomInteger(ceiling) {
-	return Math.floor(Math.random() * ceiling + 1);
-}
-
 function showNextProblem() {
-	var problemText;
-	var previousProblem = currentProblem;
-	while (previousProblem === currentProblem) {
-		switch (selectedCategory) {
-			case 'builtin-addition':
-				currentProblem = generateAdditionProblem();
-				problemText = currentProblem.firstNumber + ' + ' + currentProblem.secondNumber;
-				break;
-			case 'builtin-subtraction':
-				currentProblem = generateSubtractionProblem();
-				problemText = currentProblem.firstNumber + ' - ' + currentProblem.secondNumber;
-				break;
-			case 'builtin-multiplication':
-				currentProblem = generateMultiplicationProblem();
-				problemText = currentProblem.firstNumber + ' x ' + currentProblem.secondNumber;
-				break;
-			case 'builtin-division':
-				currentProblem = generateDivisionProblem();
-				problemText = currentProblem.firstNumber + ' / ' + currentProblem.secondNumber;
-				break;
-			case 'builtin-capitals':
-				currentProblem = getQuestionFromList(samples.capitals);
-				problemText = currentProblem.key;
-				break;
-			case 'builtin-chemSymbols':
-				currentProblem = getQuestionFromList(samples.chemSymbols);
-				problemText = currentProblem.key;
-				break;
-			case 'builtin-spanish':
-				currentProblem = getQuestionFromList(samples.spanishWords);
-				problemText = currentProblem.key;
-				break;
-			default:
-				currentProblem = getQuestionFromList(window.problemsForSelectedCategory);
-				problemText = currentProblem.key;
-				break;
+	$.get(selectedCategory.card, function(data){
+		if(currentProblem == data){
+			showNextProblem();
+		}else{
+			currentProblem = data;
+			$("#problem").html(data['question']);
 		}
-	}
-	document.getElementsByClassName('problem')[0].textContent = problemText;
+	})
 }
 
 function startSpeechRecognition() {
@@ -225,25 +243,20 @@ function startSpeechRecognition() {
 
 function checkAnswer(guess) {
 	var trimmedGuess = guess.trim().toLowerCase();
-	var answer = currentProblem.value;
-	if (typeof answer === 'string') {
-		answer = answer.toLowerCase();
-	}
-
-
-	if (trimmedGuess.indexOf('stop') >= 0 || trimmedGuess.indexOf(answer) >= 0) {
+	if (trimmedGuess.indexOf('stop') >= 0){
 		showNextProblem();
+		return;
 	}
 
-	if (trimmedGuess.indexOf(answer) >= 0) {
-		currentScore++;
-		var scoreElement = document.getElementById('currentScoreValue');
-		scoreElement.textContent = currentScore;
+	$.post(currentProblem.check, {'answer': trimmedGuess}, function(){
+		$("#currentScoreValue").html(++currentScore);
 
 		if (currentScore > highScore) {
-			scoreElement.classList.add('highlight');
+			$("#currentScoreValue").addClass('highlight');
 		}
-	}
+
+		showNextProblem();
+	})
 }
 
 function setIHeardText(textToDisplay) {
