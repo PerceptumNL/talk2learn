@@ -239,8 +239,7 @@ function SpeechFlashCardApplication(default_language, done_sound_file){
 		session_active = true;
 		$('.scores').removeClass('hidden');
 		$('.card').removeClass('hidden');
-		$('.Heard').removeClass('hidden');
-		$('.secondInstructions').empty();
+		$('.iHeard').removeClass('hidden');
 
 		// Reset score
 		score = 0;
@@ -362,5 +361,9 @@ function SpeechFlashCardApplication(default_language, done_sound_file){
 		}
 		// Remove highlight classes
 		$(".highlight").removeClass("highlight");
+		// Hide session components
+		$('.scores').addClass('hidden');
+		$('.card').addClass('hidden');
+		$('.iHeard').addClass('hidden');
 	}
 }
