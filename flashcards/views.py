@@ -4,11 +4,13 @@ Module containing views for the flashcards application.
 from django.shortcuts import render, get_object_or_404
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
 from urllib.parse import quote
 from .models import *
 
 import random
 
+@ensure_csrf_cookie
 def load(request):
     """
     Render the index page for the flashcards app.
@@ -213,12 +215,16 @@ class ArithmiticCardMixin(object):
         # Evaluate the card identifier to get the correct answer, but ensure
         #   that the global context is cleared for security purposes.
         correct_answer = eval(card_id, {'__builtins__': {}})
-        if isinstance(correct_answer, int):
-            return int(answer) == correct_answer
-        elif isinstance(correct_answer, float):
-            return float(answer) == correct_answer
-        else:
-            raise ValueError('Unexpected generated answer')
+        try:
+            if isinstance(correct_answer, int):
+                return int(answer) == correct_answer
+            elif isinstance(correct_answer, float):
+                return float(answer) == correct_answer
+            else:
+                raise TypeError('Unexpected generated answer')
+        except ValueError:
+            return False
+
 
 class SimpleAdditionCardGenerator(ArithmiticCardMixin, CardGenerator):
     """

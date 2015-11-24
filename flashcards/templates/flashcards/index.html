@@ -62,7 +62,7 @@
 						<option value="it-IT">Italiano - Italia</option>
 						<option value="it-CH">Italiano - Svizzera</option>
 						<option value="hu-HU">Magyar</option>
-						<option value="nl-NL">Nederlands</option>
+						<option value="nl-NL" selected>Nederlands</option>
 						<option value="nb-NO">Norsk bokmål</option>
 						<option value="pl-PL">Polski</option>
 						<option value="pt-BR">Português - Brasil</option>
@@ -80,18 +80,13 @@
 						<option value="la">Lingua latīna</option>
 					</select>
 					<div class="controls">
-						<button title="Kies een categorie" class="startButton disabled">Start</button>
+						<button title="Kies een categorie" class="startButton">Start</button>
 					</div>
 
 				</div>
 			</span>
 			<span class="problemArea">
-				<div class="component instructions" id="firstInstructions">
-					Kies een categorie
-					<img src="{% static 'flashcards/img/arrow.png' %}" class="leftArrow" />
-				</div>
-
-				<div class="component instructions hidden" id="secondInstructions">
+				<div class="component instructions" id="secondInstructions">
 					60 seconden om zoveel mogelijk goede antwoorden te krijgen. Als een vraag of woord niet lukt, zeg je "stop" en krijg je de volgende.
 				</div>
 
@@ -116,15 +111,22 @@
 			</span>
 		</div>
 
-		<div class="footer">
-            Te gebruiken op Limes?
-		</div>
+		<div class="footer">&nbsp;</div>
 
 		<script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
 		<script src="{% static 'flashcards/js/main.js' %}"></script>
 		<script type="text/javascript">
-			var doneSound = new Audio("{% static 'flashcards/mp3/done.mp3' %}");
-			var collectionsAPI = "{% url 'get_collections' %}"
+			$(function(){
+				var app = new SpeechFlashCardApplication("nl-NL",
+					"{% static 'flashcards/mp3/done.mp3' %}");
+				app.init("{% url 'get_collections' %}");
+				$(".startButton").click(function(){
+					app.init_session();
+				});
+				$(".languageSelector").change(function(){
+					app.set_language($(this).val());
+				})
+			});
 		</script>
 		<!--
 		<script type="text/javascript">
